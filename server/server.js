@@ -10,6 +10,8 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://carpartner.in',
+  'https://www.carpartner.in',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 app.use(cors({ origin: allowedOrigins, credentials: true }));
