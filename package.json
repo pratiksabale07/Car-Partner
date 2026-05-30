@@ -1,0 +1,11 @@
+{
+  "name": "carpartner",
+  "version": "1.0.0",
+  "description": "CarPartner — Premium Vehicle Rental Platform (MERN Stack)",
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "seed": "cd server && node seedAdmin.js",
+    "install:all": "cd server && npm install && cd ../client && npm install"
+  }
+}
