@@ -1,5 +1,8 @@
-import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Globe, Share2, Heart, Link2 } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Mail, Phone, MapPin, Globe, Share2, Heart, Link2, MessageCircle } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+
+const WHATSAPP_NUMBER = '919876543210';
 
 const Logo = () => (
   <div className="flex items-center gap-2.5">
@@ -13,7 +16,7 @@ const Logo = () => (
   </div>
 );
 
-export default function Footer() {
+function CarPartnerFooter() {
   return (
     <footer className="bg-slate-950 border-t border-slate-800/50 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -97,4 +100,80 @@ export default function Footer() {
       </div>
     </footer>
   );
+}
+
+function DriverOnTimeFooter() {
+  const { t } = useLanguage();
+
+  const quickLinks = [
+    { to: '/driver-on-time', label: t('nav.home') },
+    { to: '/driver-on-time/services', label: t('nav.services') },
+    { to: '/driver-on-time/why-us', label: t('nav.whyUs') },
+    { to: '/driver-on-time/post-job', label: t('nav.postJob') },
+    { to: '/driver-on-time/become-driver', label: t('nav.becomeDriver') },
+    { to: '/driver-on-time/contact', label: t('nav.contact') },
+  ];
+
+  return (
+    <footer className="bg-slate-950 border-t border-slate-800/50 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div>
+            <Logo />
+            <p className="mt-4 text-sm text-slate-400 leading-relaxed">{t('footer.tagline')}</p>
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi, I need a driver`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors mt-5"
+            >
+              <MessageCircle size={16} />
+              WhatsApp Us
+            </a>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">{t('footer.quickLinks')}</h4>
+            <ul className="space-y-3">
+              {quickLinks.map(link => (
+                <li key={link.to}>
+                  <Link to={link.to} className="text-sm text-slate-400 hover:text-gold-400 transition-colors duration-200">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">{t('footer.contact')}</h4>
+            <ul className="space-y-4">
+              <li className="flex items-center gap-3">
+                <Phone size={16} className="text-gold-400 flex-shrink-0" />
+                <a href="tel:+919876543210" className="text-sm text-slate-400 hover:text-gold-400 transition-colors">{t('footer.phone')}</a>
+              </li>
+              <li className="flex items-center gap-3">
+                <Mail size={16} className="text-gold-400 flex-shrink-0" />
+                <a href="mailto:info@driverontime.com" className="text-sm text-slate-400 hover:text-gold-400 transition-colors">{t('footer.email')}</a>
+              </li>
+              <li className="flex items-start gap-3">
+                <MapPin size={16} className="text-gold-400 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-slate-400">Pune, Maharashtra, India</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 pt-8 border-t border-slate-800/50 text-center">
+          <p className="text-sm text-slate-500">{t('footer.rights')}</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default function Footer() {
+  const location = useLocation();
+  const isDOT = location.pathname.startsWith('/driver-on-time');
+  return isDOT ? <DriverOnTimeFooter /> : <CarPartnerFooter />;
 }

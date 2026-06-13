@@ -11,7 +11,13 @@ const TABS = [
   { id: 'requests', label: 'Vehicle Requests', short: 'Requests' },
   { id: 'vehicles', label: 'Vehicles', short: 'Vehicles' },
   { id: 'owners', label: 'Owners', short: 'Owners' },
+  { id: 'jobs', label: 'Driver Jobs', short: 'Jobs' },
+  { id: 'driverProfiles', label: 'Driver Profiles', short: 'Drivers' },
+  { id: 'enquiries', label: 'Self-Drive Enquiries', short: 'Enquiries' },
 ];
+
+const UPLOADS_BASE = api.defaults.baseURL.replace(/\/api\/?$/, '');
+const fileUrl = (p) => `${UPLOADS_BASE}/${String(p).replace(/\\/g, '/')}`;
 
 function StatCard({ label, value, icon: Icon, color, sub }) {
   return (
@@ -38,9 +44,11 @@ function ContactCard({ label, name, phone, email, color = 'text-slate-300' }) {
       <a href={`tel:${phone}`} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-gold-400 transition-colors">
         <Phone size={11} className="text-gold-400" />{phone}
       </a>
-      <a href={`mailto:${email}`} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-gold-400 transition-colors">
-        <Mail size={11} className="text-gold-400" />{email}
-      </a>
+      {email && (
+        <a href={`mailto:${email}`} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-gold-400 transition-colors">
+          <Mail size={11} className="text-gold-400" />{email}
+        </a>
+      )}
     </div>
   );
 }
@@ -65,6 +73,14 @@ function StatusBadge({ status }) {
     approved: 'bg-emerald-500/20 text-emerald-400',
     'in-progress': 'bg-blue-500/20 text-blue-400',
     fulfilled: 'bg-emerald-500/20 text-emerald-400',
+    active: 'bg-emerald-500/20 text-emerald-400',
+    matched: 'bg-purple-500/20 text-purple-400',
+    closed: 'bg-slate-500/20 text-slate-400',
+    inactive: 'bg-slate-500/20 text-slate-400',
+    verified: 'bg-emerald-500/20 text-emerald-400',
+    new: 'bg-blue-500/20 text-blue-400',
+    booked: 'bg-emerald-500/20 text-emerald-400',
+    cancelled: 'bg-red-500/20 text-red-400',
   };
   return <span className={`badge capitalize ${cfg[status] || 'bg-slate-500/20 text-slate-400'}`}>{status?.replace('-', ' ')}</span>;
 }
@@ -77,6 +93,9 @@ export default function AdminDashboard() {
   const [requests, setRequests] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [owners, setOwners] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [driverProfiles, setDriverProfiles] = useState([]);
+  const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
 
@@ -97,6 +116,12 @@ export default function AdminDashboard() {
       api.get(`/admin/vehicles${qs}`).then(({ data }) => setVehicles(data.vehicles)).catch(() => {});
     } else if (activeTab === 'owners') {
       api.get('/admin/users').then(({ data }) => setOwners(data.users)).catch(() => {});
+    } else if (activeTab === 'jobs') {
+      api.get('/jobs').then(({ data }) => setJobs(data.jobs)).catch(() => {});
+    } else if (activeTab === 'driverProfiles') {
+      api.get('/drivers').then(({ data }) => setDriverProfiles(data.drivers)).catch(() => {});
+    } else if (activeTab === 'enquiries') {
+      api.get('/enquiries').then(({ data }) => setEnquiries(data.enquiries)).catch(() => {});
     }
   }, [activeTab, filterStatus]);
 
@@ -130,6 +155,30 @@ export default function AdminDashboard() {
       setOwners(prev => prev.map(u => u._id === id ? data.user : u));
       toast.success(`Owner ${!isActive ? 'activated' : 'deactivated'}`);
     } catch { toast.error('Failed'); }
+  };
+
+  const updateJob = async (id, status) => {
+    try {
+      const { data } = await api.patch(`/jobs/${id}/status`, { status });
+      setJobs(prev => prev.map(j => j._id === id ? data.job : j));
+      toast.success(`Marked as ${status}`);
+    } catch { toast.error('Update failed'); }
+  };
+
+  const updateDriverProfile = async (id, status) => {
+    try {
+      const { data } = await api.patch(`/drivers/${id}/status`, { status });
+      setDriverProfiles(prev => prev.map(d => d._id === id ? data.driver : d));
+      toast.success(`Marked as ${status}`);
+    } catch { toast.error('Update failed'); }
+  };
+
+  const updateEnquiry = async (id, status) => {
+    try {
+      const { data } = await api.patch(`/enquiries/${id}/status`, { status });
+      setEnquiries(prev => prev.map(e => e._id === id ? data.enquiry : e));
+      toast.success(`Marked as ${status}`);
+    } catch { toast.error('Update failed'); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center pt-24"><LoadingSpinner size="lg" text="Loading admin panel..." /></div>;
@@ -433,6 +482,196 @@ export default function AdminDashboard() {
               </div>
             ))}
             {owners.length === 0 && <div className="text-center py-12 text-slate-400">No owners registered yet</div>}
+          </div>
+        )}
+
+        {/* Driver Jobs (Driver on Time) */}
+        {activeTab === 'jobs' && (
+          <div>
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {['', 'pending', 'active', 'matched', 'closed'].map(s => (
+                <button key={s} onClick={() => setFilterStatus(s)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    filterStatus === s ? 'bg-gold-500 text-slate-900' : 'glass text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {jobs.filter(j => !filterStatus || j.status === filterStatus).map(j => (
+                <div key={j._id} className="card p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white capitalize">{j.carType} · {j.jobType?.replace('-', ' ')}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5 capitalize">
+                        {j.area} · {j.timing}
+                        {j.salary && ` · ₹${j.salary}`}
+                      </p>
+                      {j.requirements && <p className="text-xs text-slate-500 mt-1 italic">"{j.requirements}"</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      <StatusBadge status={j.status} />
+                      <StatusSelect
+                        current={j.status}
+                        options={[
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'active', label: 'Active' },
+                          { value: 'matched', label: 'Matched' },
+                          { value: 'closed', label: 'Closed' },
+                        ]}
+                        onChange={(val) => updateJob(j._id, val)}
+                      />
+                    </div>
+                  </div>
+
+                  <ContactCard
+                    label="🙋 Posted By"
+                    name={j.name}
+                    phone={j.phone}
+                    email={j.email}
+                    color="text-blue-300"
+                  />
+                </div>
+              ))}
+              {jobs.length === 0 && <div className="text-center py-12 text-slate-400">No job postings found</div>}
+            </div>
+          </div>
+        )}
+
+        {/* Driver Profiles (Driver on Time) */}
+        {activeTab === 'driverProfiles' && (
+          <div>
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {['', 'pending', 'verified', 'matched', 'inactive'].map(s => (
+                <button key={s} onClick={() => setFilterStatus(s)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    filterStatus === s ? 'bg-gold-500 text-slate-900' : 'glass text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {driverProfiles.filter(d => !filterStatus || d.status === filterStatus).map(d => (
+                <div key={d._id} className="card p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white">{d.name}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        License: {d.licenseNumber}{d.experience && ` · ${d.experience} yrs exp`}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5 capitalize">
+                        Area: {d.preferredArea} · {d.availability?.replace('-', ' ')}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{d.address}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      <StatusBadge status={d.status} />
+                      <StatusSelect
+                        current={d.status}
+                        options={[
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'verified', label: 'Verify' },
+                          { value: 'matched', label: 'Matched' },
+                          { value: 'inactive', label: 'Inactive' },
+                        ]}
+                        onChange={(val) => updateDriverProfile(d._id, val)}
+                      />
+                    </div>
+                  </div>
+
+                  <ContactCard
+                    label="🙋 Driver"
+                    name={d.name}
+                    phone={d.phone}
+                    email={d.email}
+                    color="text-blue-300"
+                  />
+
+                  {(d.documents?.drivingLicense || d.documents?.aadhaarCard || d.documents?.policeVerification) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {d.documents?.drivingLicense && (
+                        <a href={fileUrl(d.documents.drivingLicense)} target="_blank" rel="noopener noreferrer"
+                          className="badge bg-slate-800 text-gold-400 hover:bg-slate-700 transition-colors">
+                          <FileText size={12} /> Driving License
+                        </a>
+                      )}
+                      {d.documents?.aadhaarCard && (
+                        <a href={fileUrl(d.documents.aadhaarCard)} target="_blank" rel="noopener noreferrer"
+                          className="badge bg-slate-800 text-gold-400 hover:bg-slate-700 transition-colors">
+                          <FileText size={12} /> Aadhaar Card
+                        </a>
+                      )}
+                      {d.documents?.policeVerification && (
+                        <a href={fileUrl(d.documents.policeVerification)} target="_blank" rel="noopener noreferrer"
+                          className="badge bg-slate-800 text-gold-400 hover:bg-slate-700 transition-colors">
+                          <FileText size={12} /> Police Verification
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {driverProfiles.length === 0 && <div className="text-center py-12 text-slate-400">No driver profiles found</div>}
+            </div>
+          </div>
+        )}
+
+        {/* Self-Drive Enquiries (Driver on Time) */}
+        {activeTab === 'enquiries' && (
+          <div>
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {['', 'new', 'contacted', 'booked', 'cancelled'].map(s => (
+                <button key={s} onClick={() => setFilterStatus(s)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    filterStatus === s ? 'bg-gold-500 text-slate-900' : 'glass text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {enquiries.filter(e => !filterStatus || e.status === filterStatus).map(e => (
+                <div key={e._id} className="card p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white capitalize">{e.vehicleType} Car · Self Drive</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Date: {new Date(e.date).toLocaleDateString('en-IN')} · Destination: {e.destination}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      <StatusBadge status={e.status} />
+                      <StatusSelect
+                        current={e.status}
+                        options={[
+                          { value: 'new', label: 'New' },
+                          { value: 'contacted', label: 'Contacted' },
+                          { value: 'booked', label: 'Booked' },
+                          { value: 'cancelled', label: 'Cancel' },
+                        ]}
+                        onChange={(val) => updateEnquiry(e._id, val)}
+                      />
+                    </div>
+                  </div>
+
+                  <ContactCard
+                    label="🙋 Enquired By"
+                    name={e.name}
+                    phone={e.phone}
+                    color="text-blue-300"
+                  />
+                </div>
+              ))}
+              {enquiries.length === 0 && <div className="text-center py-12 text-slate-400">No enquiries found</div>}
+            </div>
           </div>
         )}
       </div>

@@ -1,12 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/db');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+
+if (!fs.existsSync('./uploads')) {
+  fs.mkdirSync('./uploads', { recursive: true });
+}
 
 const allowedOrigins = [
   'http://localhost:5173',
@@ -17,12 +23,16 @@ const allowedOrigins = [
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/drivers', require('./routes/drivers'));
+app.use('/api/jobs', require('./routes/jobs'));
+app.use('/api/enquiries', require('./routes/enquiries'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'CarPartner API Running' }));
 
