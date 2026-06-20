@@ -10,6 +10,7 @@ exports.registerDriver = async (req, res) => {
     }
 
     const documents = {};
+    // Cloudinary returns file.path as the full HTTPS URL
     if (req.files?.drivingLicense?.[0]) documents.drivingLicense = req.files.drivingLicense[0].path;
     if (req.files?.aadhaarCard?.[0]) documents.aadhaarCard = req.files.aadhaarCard[0].path;
     if (req.files?.policeVerification?.[0]) documents.policeVerification = req.files.policeVerification[0].path;

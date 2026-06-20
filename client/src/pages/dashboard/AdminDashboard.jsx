@@ -19,7 +19,11 @@ const TABS = [
 ];
 
 const UPLOADS_BASE = api.defaults.baseURL.replace(/\/api\/?$/, '');
-const fileUrl = (p) => `${UPLOADS_BASE}/${String(p).replace(/\\/g, '/')}`;
+const fileUrl = (p) => {
+  if (!p) return '';
+  if (String(p).startsWith('http')) return p; // Cloudinary URL — use directly
+  return `${UPLOADS_BASE}/${String(p).replace(/\\/g, '/')}`; // legacy local path
+};
 
 function StatCard({ label, value, icon: Icon, color, bg, sub }) {
   return (
