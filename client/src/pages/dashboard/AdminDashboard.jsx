@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Users, Truck, MessageSquare, FileText, CheckCircle, Clock, Phone, Mail, Calendar } from 'lucide-react';
+import { Users, Truck, MessageSquare, FileText, CheckCircle, Clock, Phone, Mail, Lock, Eye, EyeOff, LogOut, ShieldCheck, Trash2, ArrowRightLeft, MapPin, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import CustomSelect from '../../components/CustomSelect';
+import { useAuth } from '../../context/AuthContext';
 
 const TABS = [
   { id: 'overview', label: 'Overview', short: 'Overview' },
@@ -14,21 +15,22 @@ const TABS = [
   { id: 'jobs', label: 'Driver Jobs', short: 'Jobs' },
   { id: 'driverProfiles', label: 'Driver Profiles', short: 'Drivers' },
   { id: 'enquiries', label: 'Self-Drive Enquiries', short: 'Enquiries' },
+  { id: 'matches', label: 'Matched Profiles', short: 'Matched' },
 ];
 
 const UPLOADS_BASE = api.defaults.baseURL.replace(/\/api\/?$/, '');
 const fileUrl = (p) => `${UPLOADS_BASE}/${String(p).replace(/\\/g, '/')}`;
 
-function StatCard({ label, value, icon: Icon, color, sub }) {
+function StatCard({ label, value, icon: Icon, color, bg, sub }) {
   return (
-    <div className="card p-5">
+    <div className={`card p-5 border-l-2 ${bg}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-slate-400 mb-1">{label}</p>
-          <p className={`text-2xl font-bold ${color}`}>{value}</p>
+          <p className="text-xs text-slate-400 mb-1.5 font-medium uppercase tracking-wide">{label}</p>
+          <p className={`text-3xl font-bold ${color}`}>{value}</p>
           {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
         </div>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800`}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800/80">
           <Icon size={18} className={color} />
         </div>
       </div>
@@ -85,7 +87,88 @@ function StatusBadge({ status }) {
   return <span className={`badge capitalize ${cfg[status] || 'bg-slate-500/20 text-slate-400'}`}>{status?.replace('-', ' ')}</span>;
 }
 
+function AdminLoginGate({ onLogin }) {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [showPass, setShowPass] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.username || !form.password) return toast.error('Enter username and password');
+    setSubmitting(true);
+    try {
+      await onLogin(form.username, form.password);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid credentials');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center mx-auto mb-4 shadow-gold">
+            <ShieldCheck size={32} className="text-slate-900" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">Admin Panel</h1>
+          <p className="text-slate-400 text-sm">Car Partner &amp; Driver on Time</p>
+        </div>
+
+        <div className="card p-7">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Username</label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  className="input-field pl-10"
+                  placeholder="admin"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="input-field pl-10 pr-10"
+                  placeholder="Admin password"
+                  required
+                  autoComplete="current-password"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300">
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" disabled={submitting} className="btn-primary w-full flex items-center justify-center gap-2 py-3.5">
+              {submitting
+                ? <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                : 'Sign In to Admin Panel'
+              }
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
+  const { user, loading: authLoading, login: authLogin, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
   const [recentInquiries, setRecentInquiries] = useState([]);
@@ -96,17 +179,22 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState([]);
   const [driverProfiles, setDriverProfiles] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
 
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
+    if (!isAdmin) return;
     api.get('/admin/dashboard').then(({ data }) => {
       setStats(data.stats);
       setRecentInquiries(data.recentInquiries);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const qs = filterStatus ? `?status=${filterStatus}` : '';
     if (activeTab === 'inquiries') {
       api.get(`/inquiries/all${qs}`).then(({ data }) => setInquiries(data.inquiries)).catch(() => {});
@@ -122,8 +210,10 @@ export default function AdminDashboard() {
       api.get('/drivers').then(({ data }) => setDriverProfiles(data.drivers)).catch(() => {});
     } else if (activeTab === 'enquiries') {
       api.get('/enquiries').then(({ data }) => setEnquiries(data.enquiries)).catch(() => {});
+    } else if (activeTab === 'matches') {
+      api.get('/admin/matches').then(({ data }) => setMatches(data.matches)).catch(() => {});
     }
-  }, [activeTab, filterStatus]);
+  }, [activeTab, filterStatus, isAdmin]);
 
   const updateInquiry = async (id, status) => {
     try {
@@ -181,19 +271,81 @@ export default function AdminDashboard() {
     } catch { toast.error('Update failed'); }
   };
 
+  const confirmDelete = (label, action) => {
+    if (window.confirm(`Delete this ${label}? This cannot be undone.`)) action();
+  };
+
+  const deleteVehicle = async (id) => {
+    try {
+      await api.delete(`/admin/vehicles/${id}`);
+      setVehicles(prev => prev.filter(v => v._id !== id));
+      toast.success('Vehicle deleted');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const deleteOwner = async (id) => {
+    try {
+      await api.delete(`/admin/users/${id}`);
+      setOwners(prev => prev.filter(u => u._id !== id));
+      toast.success('Owner deleted');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const deleteJob = async (id) => {
+    try {
+      await api.delete(`/jobs/${id}`);
+      setJobs(prev => prev.filter(j => j._id !== id));
+      toast.success('Job deleted');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const deleteDriverProfile = async (id) => {
+    try {
+      await api.delete(`/drivers/${id}`);
+      setDriverProfiles(prev => prev.filter(d => d._id !== id));
+      toast.success('Driver profile deleted');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const deleteEnquiry = async (id) => {
+    try {
+      await api.delete(`/enquiries/${id}`);
+      setEnquiries(prev => prev.filter(e => e._id !== id));
+      toast.success('Enquiry deleted');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const handleAdminLogin = async (email, password) => {
+    const loggedInUser = await authLogin(email, password);
+    if (loggedInUser.role !== 'admin') {
+      logout();
+      throw { response: { data: { message: 'This account does not have admin access.' } } };
+    }
+    toast.success('Welcome, Admin!');
+  };
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
+  if (!isAdmin) return <AdminLoginGate onLogin={handleAdminLogin} />;
   if (loading) return <div className="min-h-screen flex items-center justify-center pt-24"><LoadingSpinner size="lg" text="Loading admin panel..." /></div>;
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-gold-500/20 flex items-center justify-center">
-              <span className="text-gold-400 text-lg">⚙</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gold-500/20 flex items-center justify-center">
+                <ShieldCheck size={18} className="text-gold-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Admin Control Panel</h1>
+                <p className="text-slate-400 text-xs">Car Partner &amp; Driver on Time · {user.email}</p>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-white">Admin Control Panel</h1>
+            <button onClick={() => { logout(); }} className="flex items-center gap-2 px-3 py-2 rounded-lg glass text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm">
+              <LogOut size={15} /> Sign Out
+            </button>
           </div>
-          <p className="text-slate-400 text-sm ml-12">Manage inquiries, requests, vehicles and owners</p>
         </div>
 
         {/* Tabs */}
@@ -216,6 +368,11 @@ export default function AdminDashboard() {
                   {stats.pendingVehicles}
                 </span>
               )}
+              {tab.id === 'matches' && matches.length > 0 && (
+                <span className={`ml-1 px-1 py-0.5 rounded text-[10px] sm:text-xs ${activeTab === tab.id ? 'bg-slate-900/30' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                  {matches.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -224,12 +381,12 @@ export default function AdminDashboard() {
         {activeTab === 'overview' && stats && (
           <div className="space-y-8">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <StatCard label="Vehicle Owners" value={stats.totalOwners} icon={Users} color="text-blue-400" />
-              <StatCard label="Live Vehicles" value={stats.totalVehicles} icon={Truck} color="text-emerald-400" />
-              <StatCard label="Total Inquiries" value={stats.totalInquiries} icon={MessageSquare} color="text-purple-400" />
-              <StatCard label="Pending Inquiries" value={stats.pendingInquiries} icon={Clock} color="text-gold-400" />
-              <StatCard label="Vehicle Requests" value={stats.totalRequests} icon={FileText} color="text-orange-400" />
-              <StatCard label="Pending Vehicles" value={stats.pendingVehicles} icon={Truck} color="text-yellow-400" />
+              <StatCard label="Vehicle Owners" value={stats.totalOwners} icon={Users} color="text-blue-400" bg="border-blue-500/40" />
+              <StatCard label="Live Vehicles" value={stats.totalVehicles} icon={Truck} color="text-emerald-400" bg="border-emerald-500/40" />
+              <StatCard label="Total Inquiries" value={stats.totalInquiries} icon={MessageSquare} color="text-purple-400" bg="border-purple-500/40" />
+              <StatCard label="Pending Inquiries" value={stats.pendingInquiries} icon={Clock} color="text-gold-400" bg="border-gold-500/40" />
+              <StatCard label="Vehicle Requests" value={stats.totalRequests} icon={FileText} color="text-orange-400" bg="border-orange-500/40" />
+              <StatCard label="Pending Vehicles" value={stats.pendingVehicles} icon={Truck} color="text-yellow-400" bg="border-yellow-500/40" />
             </div>
 
             {stats.pendingInquiries > 0 && (
@@ -428,7 +585,7 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <StatusBadge status={v.status} />
                       <StatusSelect
                         current={v.status}
@@ -439,6 +596,10 @@ export default function AdminDashboard() {
                         ]}
                         onChange={(val) => updateVehicle(v._id, val)}
                       />
+                      <button onClick={() => confirmDelete('vehicle', () => deleteVehicle(v._id))}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete vehicle">
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -466,7 +627,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={`badge ${u.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                       {u.isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -476,6 +637,10 @@ export default function AdminDashboard() {
                       }`}
                     >
                       {u.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button onClick={() => confirmDelete('owner', () => deleteOwner(u._id))}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete owner">
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
@@ -524,6 +689,10 @@ export default function AdminDashboard() {
                         ]}
                         onChange={(val) => updateJob(j._id, val)}
                       />
+                      <button onClick={() => confirmDelete('job', () => deleteJob(j._id))}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete job">
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
 
@@ -582,6 +751,10 @@ export default function AdminDashboard() {
                         ]}
                         onChange={(val) => updateDriverProfile(d._id, val)}
                       />
+                      <button onClick={() => confirmDelete('driver profile', () => deleteDriverProfile(d._id))}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete driver">
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
 
@@ -659,6 +832,10 @@ export default function AdminDashboard() {
                         ]}
                         onChange={(val) => updateEnquiry(e._id, val)}
                       />
+                      <button onClick={() => confirmDelete('enquiry', () => deleteEnquiry(e._id))}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete enquiry">
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
 
@@ -672,6 +849,95 @@ export default function AdminDashboard() {
               ))}
               {enquiries.length === 0 && <div className="text-center py-12 text-slate-400">No enquiries found</div>}
             </div>
+          </div>
+        )}
+
+        {/* Matched Profiles */}
+        {activeTab === 'matches' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <ArrowRightLeft size={18} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-emerald-300 font-semibold text-sm">Auto-matched based on location</p>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Drivers whose preferred area overlaps with a job's location. Contact both parties to arrange the placement.
+                </p>
+              </div>
+              <span className="ml-auto bg-emerald-500/20 text-emerald-400 text-sm font-bold px-3 py-1 rounded-full flex-shrink-0">
+                {matches.length} match{matches.length !== 1 ? 'es' : ''}
+              </span>
+            </div>
+
+            {matches.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <ArrowRightLeft size={40} className="mx-auto mb-3 opacity-20" />
+                <p className="font-medium">No matches found yet</p>
+                <p className="text-sm mt-1 text-slate-500">Matches appear when a driver's preferred area overlaps with an active job location.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {matches.map((m, i) => (
+                  <div key={i} className="card p-5 border-l-2 border-emerald-500/40">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Driver side */}
+                      <div className="bg-slate-800/60 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <Users size={13} className="text-blue-400" />
+                          </div>
+                          <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Driver</span>
+                          <StatusBadge status={m.driver.status} />
+                        </div>
+                        <p className="font-semibold text-white text-sm">{m.driver.name}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{m.driver.experience} yrs · {m.driver.availability?.replace('-', ' ')}</p>
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+                          <MapPin size={11} className="text-gold-400" />
+                          <span>Prefers: <span className="text-white">{m.driver.preferredArea}</span></span>
+                        </div>
+                        <div className="flex flex-col gap-1 mt-3">
+                          <a href={`tel:${m.driver.phone}`} className="flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300">
+                            <Phone size={11} />{m.driver.phone}
+                          </a>
+                          {m.driver.email && (
+                            <a href={`mailto:${m.driver.email}`} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-gold-400">
+                              <Mail size={11} />{m.driver.email}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Job side */}
+                      <div className="bg-slate-800/60 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-7 h-7 rounded-full bg-gold-500/20 flex items-center justify-center">
+                            <Briefcase size={13} className="text-gold-400" />
+                          </div>
+                          <span className="text-xs font-semibold text-gold-400 uppercase tracking-wide">Job Opening</span>
+                          <StatusBadge status={m.job.status} />
+                        </div>
+                        <p className="font-semibold text-white text-sm capitalize">{m.job.carType} · {m.job.jobType?.replace('-', ' ')}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 capitalize">{m.job.timing}{m.job.salary && ` · ₹${m.job.salary}`}</p>
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+                          <MapPin size={11} className="text-gold-400" />
+                          <span>Location: <span className="text-white">{m.job.area}</span></span>
+                        </div>
+                        <div className="flex flex-col gap-1 mt-3">
+                          <p className="text-xs text-slate-500">Posted by: <span className="text-slate-300">{m.job.name}</span></p>
+                          <a href={`tel:${m.job.phone}`} className="flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300">
+                            <Phone size={11} />{m.job.phone}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-center gap-2 text-xs text-emerald-400">
+                      <ArrowRightLeft size={12} />
+                      <span>Location match — call both parties to confirm placement</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 const Inquiry = require('../models/Inquiry');
 const Request = require('../models/Request');
+const Driver = require('../models/Driver');
+const JobPosting = require('../models/JobPosting');
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -86,6 +88,55 @@ exports.updateVehicleStatus = async (req, res) => {
       .populate('owner', 'name email phone');
     if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
     res.json({ success: true, vehicle });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.deleteVehicle = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findByIdAndDelete(req.params.id);
+    if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    res.json({ success: true, message: 'Vehicle deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getMatches = async (req, res) => {
+  try {
+    const [jobs, drivers] = await Promise.all([
+      JobPosting.find({ status: { $in: ['pending', 'active'] } }),
+      Driver.find({ status: { $in: ['pending', 'verified'] } }),
+    ]);
+
+    const matches = [];
+    for (const job of jobs) {
+      const jobWords = (job.area || '').toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
+      for (const driver of drivers) {
+        const driverArea = (driver.preferredArea || '').toLowerCase();
+        const jobArea = (job.area || '').toLowerCase();
+        const isMatch =
+          jobArea.includes(driverArea) ||
+          driverArea.includes(jobArea) ||
+          jobWords.some(w => driverArea.includes(w));
+        if (isMatch) {
+          matches.push({ job, driver });
+        }
+      }
+    }
+
+    res.json({ success: true, matches, total: matches.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

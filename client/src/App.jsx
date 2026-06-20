@@ -9,6 +9,7 @@ import LanguageModal from './components/LanguageModal';
 import WhatsAppButton from './components/WhatsAppButton';
 
 import Home from './pages/Home';
+import Contact from './pages/Contact';
 import Browse from './pages/Browse';
 import VehicleDetail from './pages/VehicleDetail';
 import RequestVehicle from './pages/RequestVehicle';
@@ -32,7 +33,7 @@ function Layout({ children, hideFooter }) {
     <>
       <Navbar />
       <main>{children}</main>
-      {isDOT && <WhatsAppButton />}
+      <WhatsAppButton />
       {!hideFooter && <Footer />}
     </>
   );
@@ -60,11 +61,12 @@ export default function App() {
           <LanguageModal />
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<Layout><Register /></Layout>} />
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/browse" element={<Layout><Browse /></Layout>} />
             <Route path="/vehicles/:id" element={<Layout><VehicleDetail /></Layout>} />
             <Route path="/request" element={<Layout><RequestVehicle /></Layout>} />
+            <Route path="/contact" element={<Layout><Contact /></Layout>} />
             <Route path="/driver-on-time" element={<Layout><DOTHome /></Layout>} />
             <Route path="/driver-on-time/services" element={<Layout><DOTServices /></Layout>} />
             <Route path="/driver-on-time/why-us" element={<Layout><DOTWhyChooseUs /></Layout>} />
@@ -87,9 +89,7 @@ export default function App() {
             } />
             <Route path="/admin" element={
               <Layout hideFooter>
-                <ProtectedRoute roles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
+                <AdminDashboard />
               </Layout>
             } />
             <Route path="*" element={

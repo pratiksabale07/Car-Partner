@@ -1,10 +1,14 @@
 import { MessageCircle } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 
-const WHATSAPP_NUMBER = '919876543210';
+const WHATSAPP_NUMBER = '917602050606';
 
 export default function WhatsAppButton() {
   const { t } = useLanguage();
+  const location = useLocation();
+
+  if (location.pathname.startsWith('/admin')) return null;
 
   return (
     <a

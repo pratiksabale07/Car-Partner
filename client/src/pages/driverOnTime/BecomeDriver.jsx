@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle, Upload, AlertCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { useLanguage } from '../../context/LanguageContext';
+import CityInput from '../../components/CityInput';
 
 function FileUploadField({ label, name, hint, required, onChange, fileName }) {
   return (
@@ -153,9 +154,12 @@ export default function BecomeDriver() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">{t('driver.preferredArea')}</label>
-                        <input name="preferredArea" type="text" className="input-field"
+                        <CityInput
+                          value={form.preferredArea}
+                          onChange={(val) => setForm({ ...form, preferredArea: val })}
                           placeholder={t('driver.preferredAreaPlaceholder')}
-                          value={form.preferredArea} onChange={handleChange} required />
+                          required
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">{t('driver.availability')}</label>

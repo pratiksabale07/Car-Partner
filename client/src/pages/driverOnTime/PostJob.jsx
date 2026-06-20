@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle, AlertCircle, Briefcase } from 'lucide-react';
 import api from '../../api/axios';
 import { useLanguage } from '../../context/LanguageContext';
+import CityInput from '../../components/CityInput';
 
 export default function PostJob() {
   const { t } = useLanguage();
@@ -105,9 +106,12 @@ export default function PostJob() {
 
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">{t('job.area')}</label>
-                      <input name="area" type="text" className="input-field"
+                      <CityInput
+                        value={form.area}
+                        onChange={(val) => setForm({ ...form, area: val })}
                         placeholder={t('job.areaPlaceholder')}
-                        value={form.area} onChange={handleChange} required />
+                        required
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

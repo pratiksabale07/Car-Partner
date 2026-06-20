@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Mail, Phone, MapPin, Globe, Share2, Heart, Link2, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const WHATSAPP_NUMBER = '919876543210';
 
-const Logo = () => (
+const CPLogo = () => (
   <div className="flex items-center gap-2.5">
     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
       <span className="text-slate-900 font-bold text-lg">C</span>
@@ -16,23 +16,37 @@ const Logo = () => (
   </div>
 );
 
+const DOTLogo = () => (
+  <div className="flex items-center gap-2.5">
+    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
+      <span className="text-slate-900 font-bold text-lg">D</span>
+    </div>
+    <div className="flex flex-col leading-none">
+      <span className="font-display font-semibold text-white text-lg">Driver</span>
+      <span className="font-display font-semibold gradient-text text-lg -mt-1">on Time</span>
+    </div>
+  </div>
+);
+
 function CarPartnerFooter() {
   return (
     <footer className="bg-slate-950 border-t border-slate-800/50 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           <div className="lg:col-span-1">
-            <Logo />
+            <CPLogo />
             <p className="mt-4 text-sm text-slate-400 leading-relaxed">
               The premium vehicle rental marketplace connecting owners and renters seamlessly through our trusted admin-managed platform.
             </p>
-            <div className="flex gap-3 mt-5">
-              {[Share2, Globe, Heart, Link2].map((Icon, i) => (
-                <button key={i} className="w-9 h-9 glass rounded-lg flex items-center justify-center text-slate-400 hover:text-gold-400 hover:border-gold-500/30 transition-all duration-200">
-                  <Icon size={16} />
-                </button>
-              ))}
-            </div>
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi, I need help with a vehicle rental.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors mt-5"
+            >
+              <MessageCircle size={16} />
+              WhatsApp Us
+            </a>
           </div>
 
           <div>
@@ -43,6 +57,7 @@ function CarPartnerFooter() {
                 { label: 'List Your Vehicle', to: '/register' },
                 { label: 'Request a Vehicle', to: '/request' },
                 { label: 'How It Works', to: '/#how-it-works' },
+                { label: 'Contact Us', to: '/contact' },
               ].map(link => (
                 <li key={link.to}>
                   <Link to={link.to} className="text-sm text-slate-400 hover:text-gold-400 transition-colors duration-200">
@@ -119,7 +134,7 @@ function DriverOnTimeFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <Logo />
+            <DOTLogo />
             <p className="mt-4 text-sm text-slate-400 leading-relaxed">{t('footer.tagline')}</p>
             <a
               href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi, I need a driver`}

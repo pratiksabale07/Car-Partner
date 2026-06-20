@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Truck, CheckCircle, Clock, IndianRupee, Eye, Trash2, Phone, Mail, MessageSquare } from 'lucide-react';
+import { Plus, Truck, CheckCircle, Clock, Eye, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -11,13 +11,6 @@ const STATUS_BADGE = {
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20',
   approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20',
   rejected: 'bg-red-500/20 text-red-400 border-red-500/20',
-};
-
-const INQUIRY_STATUS = {
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  contacted: 'bg-blue-500/20 text-blue-400',
-  'deal-done': 'bg-emerald-500/20 text-emerald-400',
-  rejected: 'bg-red-500/20 text-red-400',
 };
 
 function AddVehicleModal({ onClose, onSave }) {
@@ -159,19 +152,14 @@ function AddVehicleModal({ onClose, onSave }) {
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
-  const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('vehicles');
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/vehicles/my'),
-      api.get('/inquiries/my'),
-    ]).then(([v, i]) => {
-      setVehicles(v.data.vehicles);
-      setInquiries(i.data.inquiries);
-    }).catch(() => {}).finally(() => setLoading(false));
+    api.get('/vehicles/my')
+      .then(({ data }) => setVehicles(data.vehicles))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const deleteVehicle = async (id) => {
@@ -187,8 +175,6 @@ export default function OwnerDashboard() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center pt-24"><LoadingSpinner size="lg" text="Loading dashboard..." /></div>;
 
-  const pendingInquiries = inquiries.filter(i => i.status === 'pending').length;
-
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -203,12 +189,11 @@ export default function OwnerDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Listed Vehicles', value: vehicles.length, icon: Truck, color: 'text-blue-400' },
             { label: 'Approved', value: vehicles.filter(v => v.status === 'approved').length, icon: CheckCircle, color: 'text-emerald-400' },
-            { label: 'Total Inquiries', value: inquiries.length, icon: MessageSquare, color: 'text-purple-400' },
-            { label: 'New Inquiries', value: pendingInquiries, icon: Clock, color: 'text-gold-400' },
+            { label: 'Pending Approval', value: vehicles.filter(v => v.status === 'pending').length, icon: Clock, color: 'text-gold-400' },
           ].map(stat => {
             const Icon = stat.icon;
             return (
@@ -223,111 +208,46 @@ export default function OwnerDashboard() {
           })}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 p-1 glass-dark rounded-xl mb-6 overflow-x-auto max-w-full scrollbar-hide">
-          {[
-            { id: 'vehicles', label: 'My Vehicles', count: vehicles.length },
-            { id: 'inquiries', label: 'Inquiries', count: inquiries.length, badge: pendingInquiries },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                activeTab === tab.id ? 'bg-gold-500 text-slate-900' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {tab.label}
-              {tab.badge > 0 && (
-                <span className={`px-1.5 py-0.5 rounded text-xs ${activeTab === tab.id ? 'bg-slate-900/30' : 'bg-gold-500/20 text-gold-400'}`}>
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Vehicles tab */}
-        {activeTab === 'vehicles' && (
-          vehicles.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="text-6xl mb-4 opacity-30">🚛</div>
-              <h3 className="text-lg font-semibold text-slate-300 mb-2">No Vehicles Listed</h3>
-              <p className="text-slate-500 mb-4">List your first vehicle to start receiving inquiries.</p>
-              <button onClick={() => setShowAddModal(true)} className="btn-primary">List Vehicle</button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {vehicles.map(v => (
-                <div key={v._id} className="card p-5 hover:border-slate-600/50 transition-all">
-                  <div className="aspect-[16/9] bg-slate-800 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                    {v.images?.[0]
-                      ? <img src={v.images[0]} alt={v.title} className="w-full h-full object-cover" />
-                      : <span className="text-5xl">🚗</span>}
-                  </div>
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-white text-sm line-clamp-1">{v.title}</h4>
-                    <span className={`badge border ${STATUS_BADGE[v.status]} capitalize text-xs ml-2 flex-shrink-0`}>{v.status}</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mb-2 capitalize">{v.type} · {v.location}</p>
-                  <div className="flex gap-2 text-xs text-slate-400 mb-4">
-                    {v.pricing?.daily > 0 && <span className="text-gold-400 font-medium">₹{v.pricing.daily}/day</span>}
-                    {v.pricing?.monthly > 0 && <span className="text-gold-400/70">₹{v.pricing.monthly}/mo</span>}
-                  </div>
-                  {v.status === 'pending' && (
-                    <p className="text-xs text-yellow-400/70 mb-3">Awaiting admin approval before going live.</p>
-                  )}
-                  <div className="flex gap-2">
-                    <Link to={`/vehicles/${v._id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border border-slate-700/60 text-xs text-slate-400 hover:text-white transition-all">
-                      <Eye size={13} /> View
-                    </Link>
-                    <button onClick={() => deleteVehicle(v._id)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-red-500/20 text-xs text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+        {/* Vehicle list */}
+        {vehicles.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4 opacity-30">🚛</div>
+            <h3 className="text-lg font-semibold text-slate-300 mb-2">No Vehicles Listed</h3>
+            <p className="text-slate-500 mb-4">List your first vehicle to start receiving inquiries.</p>
+            <button onClick={() => setShowAddModal(true)} className="btn-primary">List Vehicle</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vehicles.map(v => (
+              <div key={v._id} className="card p-5 hover:border-slate-600/50 transition-all">
+                <div className="aspect-[16/9] bg-slate-800 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
+                  {v.images?.[0]
+                    ? <img src={v.images[0]} alt={v.title} className="w-full h-full object-cover" />
+                    : <span className="text-5xl">🚗</span>}
                 </div>
-              ))}
-            </div>
-          )
-        )}
-
-        {/* Inquiries tab */}
-        {activeTab === 'inquiries' && (
-          inquiries.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="text-6xl mb-4 opacity-30">💬</div>
-              <h3 className="text-lg font-semibold text-slate-300 mb-2">No Inquiries Yet</h3>
-              <p className="text-slate-500">When someone is interested in your vehicles, inquiries will appear here.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {inquiries.map(inq => (
-                <div key={inq._id} className="card p-5">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <h4 className="font-semibold text-white text-sm">{inq.vehicle?.title || 'Vehicle'}</h4>
-                      <p className="text-xs text-slate-400 capitalize">{inq.vehicle?.type} · {inq.rentalType}</p>
-                    </div>
-                    <span className={`badge ${INQUIRY_STATUS[inq.status] || 'bg-slate-500/20 text-slate-400'} capitalize flex-shrink-0`}>
-                      {inq.status}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-400 mb-3">
-                    <div>{new Date(inq.startDate).toLocaleDateString('en-IN')} → {new Date(inq.endDate).toLocaleDateString('en-IN')}</div>
-                    {inq.purpose && <div>Purpose: {inq.purpose}</div>}
-                  </div>
-                  <div className="p-3 bg-slate-800/50 rounded-xl text-xs space-y-1 text-slate-400">
-                    <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">Inquiry from</p>
-                    <p className="font-medium text-white">{inq.seekerName}</p>
-                    <div className="flex items-center gap-1"><Phone size={11} className="text-gold-400" />{inq.seekerPhone}</div>
-                    <div className="flex items-center gap-1"><Mail size={11} className="text-gold-400" />{inq.seekerEmail}</div>
-                  </div>
-                  {inq.adminNote && (
-                    <p className="text-xs text-gold-300 mt-2 p-2 bg-gold-500/5 border border-gold-500/20 rounded-lg">
-                      Admin: {inq.adminNote}
-                    </p>
-                  )}
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-semibold text-white text-sm line-clamp-1">{v.title}</h4>
+                  <span className={`badge border ${STATUS_BADGE[v.status]} capitalize text-xs ml-2 flex-shrink-0`}>{v.status}</span>
                 </div>
-              ))}
-            </div>
-          )
+                <p className="text-xs text-slate-400 mb-2 capitalize">{v.type} · {v.location}</p>
+                <div className="flex gap-2 text-xs text-slate-400 mb-4">
+                  {v.pricing?.daily > 0 && <span className="text-gold-400 font-medium">₹{v.pricing.daily}/day</span>}
+                  {v.pricing?.monthly > 0 && <span className="text-gold-400/70">₹{v.pricing.monthly}/mo</span>}
+                </div>
+                {v.status === 'pending' && (
+                  <p className="text-xs text-yellow-400/70 mb-3">Awaiting admin approval before going live.</p>
+                )}
+                <div className="flex gap-2">
+                  <Link to={`/vehicles/${v._id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border border-slate-700/60 text-xs text-slate-400 hover:text-white transition-all">
+                    <Eye size={13} /> View
+                  </Link>
+                  <button onClick={() => deleteVehicle(v._id)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-red-500/20 text-xs text-red-400 hover:bg-red-500/10 transition-all">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
