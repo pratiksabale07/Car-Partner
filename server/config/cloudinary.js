@@ -11,8 +11,8 @@ const driverDocStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder: 'carpartner/driver-docs',
-    resource_type: 'auto',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
+    // PDFs must use 'raw', images use 'image' — both are publicly accessible
+    resource_type: file.mimetype === 'application/pdf' ? 'raw' : 'image',
     public_id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`,
   }),
 });
