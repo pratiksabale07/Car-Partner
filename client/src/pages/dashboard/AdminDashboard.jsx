@@ -22,11 +22,11 @@ const UPLOADS_BASE = api.defaults.baseURL.replace(/\/api\/?$/, '');
 const fileUrl = (p) => {
   if (!p) return '';
   if (String(p).startsWith('http')) {
-    // Inject fl_inline so PDFs open in browser instead of downloading
-    if (p.includes('/raw/upload/') && !p.includes('fl_inline')) {
-      return p.replace('/raw/upload/', '/raw/upload/fl_inline/');
+    // PDFs stored on Cloudinary as raw — wrap in Google Docs viewer so they open in browser
+    if (p.includes('/raw/upload/')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(p)}&embedded=false`;
     }
-    return p;
+    return p; // images open directly
   }
   return `${UPLOADS_BASE}/${String(p).replace(/\\/g, '/')}`; // legacy local path
 };
